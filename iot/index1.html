@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Temperature Fan Control</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            background-color: #007bff;
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 18px;
+            margin-left: 20px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar a:hover {
+            background-color: #0056b3;
+        }
+
+        /* Profile Popup Styles */
+        .profile-popup {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            display: none;
+            width: 240px;
+        }
+
+        .profile-popup.active {
+            display: block;
+        }
+
+        .profile-popup button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 16px;
+            text-align: center;
+            color: #fff;
+            background-color: #dc3545;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .profile-popup button:hover {
+            background-color: #c82333;
+        }
+
+        /* Content Section Styles */
+        .content-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+            padding: 20px;
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .content-section h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #007bff;
+        }
+
+        /* Fan Control Styles */
+        .fan-control {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .fan-control form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .fan-control label {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .fan-control input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .15s ease-in-out;
+            border-radius: 5px;
+        }
+
+        .fan-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #007bff;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .fan-control input[type="range"]:hover {
+            opacity: 1;
+        }
+
+        .fan-control button {
+            padding: 12px;
+            font-size: 18px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .fan-control button:hover {
+            background-color: #218838;
+        }
+
+        /* Chart Styles */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        /* Footer Styles */
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #6c757d;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <a href="#" onclick="toggleProfilePopup()">Profile <span class="profile-symbol">👤</span></a>
+        </div>
+        <div class="profile-popup" id="profilePopup">
+            <button class="close-btn" onclick="toggleProfilePopup()">×</button>
+            <form id="loginForm">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password">
+                <button type="submit">Log In</button>
+            </form>
+            <button onclick="signOut()">Log Out</button>
+        </div>
+        <div class="content-section">
+            <div class="fan-control">
+                <h2>Fan Control</h2>
+                <form id="fanControlForm">
+                    <label for="fan-speed">Fan Speed:</label>
+                    <input type="range" id="fan-speed" name="fan-speed" min="0" max="100" value="50">
+                    <button type="submit" id="fanButton">Turn On</button>
+                </form>
+            </div>
+            <div class="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+        <footer>
+            <p>&copy; 2024 Room Temperature Fan Control. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('fanControlForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var button = document.getElementById('fanButton');
+            var currentAction = button.innerText;
+
+            if (currentAction === 'Turn On') {
+                // Simulate fan speed setting
+                setTimeout(function() {
+                    console.log('Setting fan speed...');
+                    button.innerText = 'Turn Off';
+                    updateFanSpeedDisplay();
+                }, 1000);
+            } else if (currentAction === 'Turn Off') {
+                // Simulate turning off fan
+                setTimeout(function() {
+                    console.log('Turning off fan...');
+                    button.innerText = 'Turn On';
+                    updateFanSpeedDisplay();
+                }, 1000);
+            }
+        });
+
+        function updateFanSpeedDisplay() {
+            var fanSpeedDisplay = document.getElementById('currentFanSpeed');
+            var fanSpeedRange = document.getElementById('fan-speed');
+            fanSpeedDisplay.innerText = fanSpeedRange.value + '%';
+        }
+
+        function toggleProfilePopup() {
+            var popup = document.getElementById('profilePopup');
+            popup.classList.toggle('active');
+        }
+
+        function signOut() {
+            alert("Signing out...");
+            // Add sign out functionality here
+        }
+
+        // Chart.js initialization
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: [22, 24, 26, 28, 27, 25, 23],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+                tooltips: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                hover: {
+                    mode: 'nearest',
+                    intersect: true
+                }
+            }
+        });
+    </script>
+</body>
+</html>
